@@ -1,15 +1,20 @@
-﻿using Newtonsoft.Json.Bson;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
+using Newtonsoft.Json.Bson;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using SimpleBot.Infrastructure.Mediator.Events;
 using SimpleBot.Models;
 using System.Threading.Channels;
 
 namespace SimpleBot.Infrastructure.Mediator.MQ
 {
-    public abstract class RabbitMediator : IDisposable
+    public abstract class RabbitMediator : IDisposable, IMediator
     {
         private readonly IModel _channel;
-        private const string CommandExchange = "commands";
-        private const string CommandRoute = "commands_route";
+        private const string EventsExchange = "events";
+        private const string EventsRoute = "events_route";
+        private const string EventsQueue = "events_queue";
+        
         public RabbitMediator(RabbitMQConfiguration rabbitMQConfiguration)
         {
             var factory = new ConnectionFactory
@@ -31,24 +36,49 @@ namespace SimpleBot.Infrastructure.Mediator.MQ
 
         private void ExchangeDeclare()
         {
-            _channel.ExchangeDeclare(exchange: CommandExchange, type: ExchangeType.Direct);
+            _channel.ExchangeDeclare(exchange: EventsExchange, type: ExchangeType.Direct);
 
-        }
-
-        public void PublishEvent(byte[] message)
-        {
-            ExchangeDeclare();
-            _channel.BasicPublish(CommandExchange, CommandRoute, basicProperties: null,body: message);
         }
 
         public string QueueDeclare()
         {
             var queueName = _channel.QueueDeclare().QueueName;
             _channel.QueueBind(queue: queueName,
-                              exchange: CommandExchange,
+                              exchange: EventsExchange,
                               routingKey: string.Empty);
 
             return queueName;
         }
+
+        public void RegisterHandler<T>(Action<T> handler)
+        {
+            
+        }
+
+        public void Publish(byte[] message)
+        {
+            ExchangeDeclare();
+
+            _channel.BasicPublish(EventsExchange, EventsRoute, basicProperties: null, body: message);
+        }
+
+        public void Consume(Action<object?> action)
+        {
+            _channel.ExchangeDeclare(EventsExchange, ExchangeType.Direct);
+
+            _channel.QueueDeclare(EventsQueue, true, false, true);
+
+            _channel.QueueBind(EventsQueue, EventsExchange, EventsRoute);
+
+            var consumer = new AsyncEventingBasicConsumer(_channel);
+
+            consumer.Received += async (sender, @event) =>
+            {
+                //action.Invoke();                
+            };
+
+            _channel.BasicConsume(EventsQueue, false, consumer);
+        }
+
     }
 }
