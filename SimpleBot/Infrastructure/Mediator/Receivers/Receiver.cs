@@ -1,4 +1,6 @@
-﻿using SimpleBot.Infrastructure.Mediator.MQ;
+﻿using SimpleBot.Infrastructure.Events;
+using SimpleBot.Infrastructure.Mediator.Events;
+using SimpleBot.Infrastructure.Mediator.MQ;
 
 namespace SimpleBot.Infrastructure.Mediator.Receivers
 {
@@ -6,11 +8,20 @@ namespace SimpleBot.Infrastructure.Mediator.Receivers
     {
 
 
-        public void Handle<T>(T @event)
+        public void Handle<T>(T @event) where T : BaseEvent
         {
-            rabbitMediator.Consume();
+            
 
-            throw new NotImplementedException();
+        }
+
+        public void Handle(StartEvent @event)
+        {
+            
+        }
+
+        public void Handle(ProductEvent @event)
+        {
+            
         }
     }
 }

@@ -3,7 +3,9 @@ using Newtonsoft.Json.Bson;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using SimpleBot.Infrastructure.Mediator.Events;
+using SimpleBot.Infrastructure.Mediator.Receivers;
 using SimpleBot.Models;
+using System.Text.Json;
 using System.Threading.Channels;
 
 namespace SimpleBot.Infrastructure.Mediator.MQ
@@ -11,11 +13,12 @@ namespace SimpleBot.Infrastructure.Mediator.MQ
     public abstract class RabbitMediator : IDisposable, IMediator
     {
         private readonly IModel _channel;
+        private readonly IReceiver _receiver;
         private const string EventsExchange = "events";
         private const string EventsRoute = "events_route";
         private const string EventsQueue = "events_queue";
         
-        public RabbitMediator(RabbitMQConfiguration rabbitMQConfiguration)
+        public RabbitMediator(RabbitMQConfiguration rabbitMQConfiguration, IReceiver receiver)
         {
             var factory = new ConnectionFactory
             {
@@ -27,6 +30,7 @@ namespace SimpleBot.Infrastructure.Mediator.MQ
             };
             using var connection = factory.CreateConnection();
             _channel = connection.CreateModel();
+            _receiver = receiver;
         }
 
         public void Dispose()
@@ -62,7 +66,7 @@ namespace SimpleBot.Infrastructure.Mediator.MQ
             _channel.BasicPublish(EventsExchange, EventsRoute, basicProperties: null, body: message);
         }
 
-        public void Consume(Action<object?> action)
+        public void Consume()
         {
             _channel.ExchangeDeclare(EventsExchange, ExchangeType.Direct);
 
@@ -72,13 +76,16 @@ namespace SimpleBot.Infrastructure.Mediator.MQ
 
             var consumer = new AsyncEventingBasicConsumer(_channel);
 
-            consumer.Received += async (sender, @event) =>
+            consumer.Received += async (sender, data) =>
             {
-                //action.Invoke();                
+                BaseEvent @event = JsonSerializer.Deserialize<BaseEvent>(data.Body.ToArray());
+
+                _receiver.Handle(@event);
             };
 
             _channel.BasicConsume(EventsQueue, false, consumer);
         }
 
+        
     }
 }
