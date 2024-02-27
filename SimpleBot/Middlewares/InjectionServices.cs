@@ -1,4 +1,7 @@
-﻿using SimpleBot.Models;
+﻿using SimpleBot.Infrastructure.Mediator;
+using SimpleBot.Infrastructure.Mediator.MQ;
+using SimpleBot.Infrastructure.Mediator.Receivers;
+using SimpleBot.Models;
 using SimpleBot.Services;
 
 namespace SimpleBot.Middlewares
@@ -8,9 +11,15 @@ namespace SimpleBot.Middlewares
         public static IServiceCollection AddServices(this IServiceCollection services, IConfiguration configuration) 
         {
             var botConfig = configuration.GetBotConfig();
-            services.AddHostedService<SearchHostedService>();
-            services.AddSingleton(botConfig);
+            var rabbitMqConfig = configuration.GetRabbitMQConfiguration();
+            //services.AddHostedService<SearchHostedService>();
 
+            services.AddSingleton(botConfig);
+            services.AddSingleton(rabbitMqConfig);
+            
+            services.AddSingleton<IReceiver, Receiver>();
+            services.AddSingleton<IMediator, RabbitMediator>();
+            services.AddSingleton<RegisterHandler>();
             return services;
         }
 
@@ -19,6 +28,13 @@ namespace SimpleBot.Middlewares
             var botConfig = new BotConfig();
             configuration.Bind("BotConfig", botConfig);
             return botConfig;
+        }
+        
+        public static RabbitMQConfiguration GetRabbitMQConfiguration(this IConfiguration configuration) 
+        {
+            var config = new RabbitMQConfiguration();
+            configuration.Bind("RabbitMQConfiguration", config);
+            return config;
         }
 
     }

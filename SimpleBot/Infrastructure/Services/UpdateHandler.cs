@@ -2,10 +2,17 @@
 using Telegram.Bot.Types;
 using Telegram.Bot.Polling;
 using System.Threading;
+using SimpleBot.Infrastructure.Mediator.MQ;
 namespace SimpleBot.Infrastructure.Services
 {
     public class UpdateHandler : IUpdateHandler
     {
+        private readonly IMediator mediator;
+
+        public UpdateHandler(IMediator mediator) 
+        {
+            this.mediator = mediator;
+        }
         public Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();

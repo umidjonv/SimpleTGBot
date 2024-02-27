@@ -1,22 +1,26 @@
 ﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Bson;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using SimpleBot.Infrastructure.Mediator.Events;
 using SimpleBot.Infrastructure.Mediator.Receivers;
 using SimpleBot.Models;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 
 namespace SimpleBot.Infrastructure.Mediator.MQ
 {
-    public abstract class RabbitMediator : IDisposable, IMediator
+    public class RabbitMediator : IMediator
     {
         private readonly IModel _channel;
         private readonly IReceiver _receiver;
         private const string EventsExchange = "events";
         private const string EventsRoute = "events_route";
         private const string EventsQueue = "events_queue";
+        
+
         
         public RabbitMediator(RabbitMQConfiguration rabbitMQConfiguration, IReceiver receiver)
         {
@@ -54,9 +58,9 @@ namespace SimpleBot.Infrastructure.Mediator.MQ
             return queueName;
         }
 
-        public void RegisterHandler<T>(Action<T> handler)
+        public void RegisterHandler<T>(Action<T> handler) where T: BaseEvent
         {
-            
+            this.Consume(handler);
         }
 
         public void Publish(byte[] message)
@@ -66,7 +70,7 @@ namespace SimpleBot.Infrastructure.Mediator.MQ
             _channel.BasicPublish(EventsExchange, EventsRoute, basicProperties: null, body: message);
         }
 
-        public void Consume()
+        public void Consume<T>(Action<T> action) where T : BaseEvent
         {
             _channel.ExchangeDeclare(EventsExchange, ExchangeType.Direct);
 
@@ -78,14 +82,24 @@ namespace SimpleBot.Infrastructure.Mediator.MQ
 
             consumer.Received += async (sender, data) =>
             {
-                BaseEvent @event = JsonSerializer.Deserialize<BaseEvent>(data.Body.ToArray());
+                var @event = JsonSerializer.Deserialize<T>(Encoding.UTF8.GetString(data.Body.ToArray()));
+                if (@event is null)
+                    throw new ArgumentNullException(nameof(@event), "Could not find event from consumer!");
 
-                _receiver.Handle(@event);
+                await Task.Run(() => { action.Invoke(@event); });
+
+                
+                //var handlerMethod = _receiver.GetType().GetMethod("Handle", new Type[] { @event.GetType() });
+                //if (handlerMethod is null)
+                //    throw new ArgumentNullException(nameof(handlerMethod), "Could not find event handler method!");
+
+                //await (handlerMethod.Invoke(_receiver, new object[] { @event }) as Task);
+
+
             };
 
             _channel.BasicConsume(EventsQueue, false, consumer);
         }
 
-        
     }
 }
