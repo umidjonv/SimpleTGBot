@@ -4,11 +4,11 @@ namespace SimpleBot.Infrastructure.Mediator.MQ
 {
     public interface IMediator
     {
-        void RegisterHandler<T>(Action<T> handler) where T : BaseEvent;
+        void RegisterHandler<T>(Func<T, Task> handler) where T : BaseEvent;
 
-        void Publish(byte[] message);
+        void Publish<T>(T @event) where T : BaseEvent;
 
-        void Consume<T>(Action<T> action) where T : BaseEvent;
+        void Consume<T>(Func<T, Task> action) where T : BaseEvent;
 
     }
 }

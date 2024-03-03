@@ -9,12 +9,12 @@ namespace SimpleBot.Infrastructure.Mediator.Handlers
     {
         public void Publish<T>(T message) where T : BaseEvent
         {
-            message.EventType = typeof(T);
+            //message.EventType = typeof(T);
 
-            var serializedJson = System.Text.Json.JsonSerializer.Serialize(message);
+            //var serializedJson = System.Text.Json.JsonSerializer.Serialize(message);
             
-            var payload = Encoding.UTF8.GetBytes(serializedJson);
-            rabbitMediator.Publish(payload);
+            //var payload = Encoding.UTF8.GetBytes(serializedJson);
+            //rabbitMediator.Publish(payload);
             
 
         }

@@ -9,12 +9,14 @@ namespace SimpleBot.Infrastructure
     {
         private readonly ITelegramBotClient _botClient;
         private readonly TUpdateHandler _updateHandler;
+        private readonly ILogger<ReceiverServiceBase<TUpdateHandler>> _logger;
 
         public ReceiverServiceBase(ITelegramBotClient botClient,
-        TUpdateHandler updateHandler)
+        TUpdateHandler updateHandler, ILogger<ReceiverServiceBase<TUpdateHandler>> logger)
         {
             _botClient = botClient;
             _updateHandler = updateHandler;
+            _logger = logger;
         }
 
         public async Task ReceiveAsync(CancellationToken stoppingToken)
@@ -26,6 +28,7 @@ namespace SimpleBot.Infrastructure
             };
 
             var me = await _botClient.GetMeAsync(stoppingToken);
+            _logger.LogInformation("Start receiving updates for {BotName}", me.Username ?? "My Awesome Bot");
 
             // Start receiving updates
             await _botClient.ReceiveAsync(

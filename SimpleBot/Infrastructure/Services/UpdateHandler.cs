@@ -3,6 +3,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Polling;
 using System.Threading;
 using SimpleBot.Infrastructure.Mediator.MQ;
+using SimpleBot.Infrastructure.Events;
 namespace SimpleBot.Infrastructure.Services
 {
     public class UpdateHandler : IUpdateHandler
@@ -49,6 +50,15 @@ namespace SimpleBot.Infrastructure.Services
         {
             if (message.Text is not { } messageText)
                 return;
+
+            var @event = new StartEvent 
+            {
+                ChatIdentifier = message.Chat.Id,
+                Id = Guid.NewGuid(),
+                Name = message.Text,
+            };
+
+            mediator.Publish(@event);
 
             //var action = messageText.Split(' ')[0] switch
             //{
