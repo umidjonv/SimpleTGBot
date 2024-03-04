@@ -53,9 +53,9 @@ namespace SimpleBot.Infrastructure.Mediator.MQ
             _channel.Dispose();
         }
 
-        private void ExchangeDeclare()
+        private void ExchangeDeclare(string name = EventsExchange)
         {
-            _channel.ExchangeDeclare(exchange: EventsExchange, type: ExchangeType.Direct);
+            _channel.ExchangeDeclare(exchange: name, type: ExchangeType.Direct);
 
         }
 
@@ -77,25 +77,25 @@ namespace SimpleBot.Infrastructure.Mediator.MQ
 
         public void Publish<T>(T @event) where T : BaseEvent
         {
-            var queueName = $"{EventExchange}_{typeof(T).Name}";
+            var route = $"{EventsRoute}_{typeof(T).Name}";
             ExchangeDeclare();
 
             var messageJson = JsonSerializer.Serialize<T>(@event);
 
             var message = Encoding.UTF8.GetBytes(messageJson);
 
-            _channel.BasicPublish(EventsExchange, EventsRoute, basicProperties: null, body: message);
+            _channel.BasicPublish(EventsExchange, route, basicProperties: null, body: message);
         }
 
         public void Consume<T>(Func<T, Task> action) where T : BaseEvent
         {
             _channel.ExchangeDeclare(EventsExchange, ExchangeType.Direct);
 
-            var queueName = $"{EventsQueue}_{typeof(T).Name}";
+            var route = $"{EventsRoute}_{typeof(T).Name}";
 
-            _channel.QueueDeclare(queueName, true, false, true);
+            _channel.QueueDeclare(route, true, false, true);
 
-            _channel.QueueBind(queueName, EventsExchange, EventsRoute);
+            _channel.QueueBind(route, EventsExchange, route);
 
             var consumer = new AsyncEventingBasicConsumer(_channel);
 
@@ -127,7 +127,7 @@ namespace SimpleBot.Infrastructure.Mediator.MQ
 
             };
 
-            _channel.BasicConsume(queueName, false, consumer);
+            _channel.BasicConsume(route, false, consumer);
         }
 
     }

@@ -51,7 +51,20 @@ namespace SimpleBot.Infrastructure.Services
             if (message.Text is not { } messageText)
                 return;
 
-            var @event = new StartEvent 
+            
+
+            switch (messageText.Split(' ')[0])
+            {
+                case "/start": await SendStartEvent(message); break;
+                case "/product":  await SendProductEvent(message); break;
+                
+            };
+
+        }
+
+        private async Task SendStartEvent(Message message)
+        {
+            var @event = new StartEvent
             {
                 ChatIdentifier = message.Chat.Id,
                 Id = Guid.NewGuid(),
@@ -59,20 +72,26 @@ namespace SimpleBot.Infrastructure.Services
             };
 
             mediator.Publish(@event);
-
-            //var action = messageText.Split(' ')[0] switch
-            //{
-            //    "/products" => "Please enter search text:",
-
-            //    _ => Usage(_botClient, message, cancellationToken)
-            //};
-
         }
-        
+
+        private async Task SendProductEvent(Message message)
+        {
+            var @event = new ProductEvent
+            {
+                ChatIdentifier = message.Chat.Id,
+                Id = Guid.NewGuid(),
+                Name = message.Text,
+            };
+
+            mediator.Publish(@event);
+        }
 
         private async Task Usage(ITelegramBotClient client, Message? message, CancellationToken cancellationToken)
         {
-            
+            var commandList = "/start/r/n" +
+                "/product";
+
+            await client.SendTextMessageAsync(message.Chat.Id, commandList, cancellationToken: cancellationToken);
         }
     }
 }
